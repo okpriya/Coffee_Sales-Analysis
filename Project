@@ -1,0 +1,378 @@
+-- 1.Show all coffee sales records.
+SELECT * from dbo.Coffe_sales;
+
+--2. Distinct coffee names sold.
+SELECT distinct coffee_name from dbo.Coffe_sales;
+
+--3. Find all sales where payment type is card.
+SELECT * from dbo.Coffe_sales
+where cash_type= 'card';
+
+--4.Display sales made in the Morning.
+SELECT * from dbo.Coffe_sales
+where Time_Of_Day='Morning';
+
+--5.Show sales that happened on Friday.
+SELECT * from dbo.Coffe_sales
+where Weekday='Fri';
+
+--6.Get all records for the month of March.
+SELECT * from dbo.Coffe_sales
+where Month_name = 'Mar';
+
+--7.Display transactions where the amount (money) is greater than 30.
+SELECT * from dbo.Coffe_sales
+where money>30;
+
+--8.List all sales sorted by money in descending order.
+ SELECT * from dbo.Coffe_sales
+order by money desc;
+
+--9.Show coffee sales ordered by hour_of_day.
+SELECT * from dbo.Coffe_sales
+order by hour_of_day;
+
+--10.Find sales that occurred after 6 PM (hour_of_day > 18).
+SELECT * from dbo.Coffe_sales
+where hour_of_day > 18;
+
+
+--?? Intermediate SQL Questions (AGGREGATES, GROUP BY)
+--? Coffee-Level Analysis
+
+--11.Total revenue generated overall.
+SELECT sum(money) as total_revenue from dbo.Coffe_sales;
+
+--12.Total revenue per coffee type.
+SELECT sum(money) as total_revenue,coffee_name
+FROM dbo.Coffe_sales group by coffee_name;
+
+--13.Average price of each coffee.
+SELECT round(avg(money),2) as avg_price,coffee_name
+FROM dbo.Coffe_sales group by coffee_name order by avg_price desc;
+
+--14.Which coffee generated the highest revenue?
+SELECT TOP 1
+       coffee_name,
+       SUM(money) AS revenue
+FROM dbo.Coffe_sales
+GROUP BY coffee_name
+ORDER BY revenue DESC;
+
+--15.Number of times each coffee was sold.
+SELECT coffee_name, COUNT(*) AS total_orders
+FROM dbo.Coffe_sales
+GROUP BY coffee_name;
+
+--16.Top 3 most sold coffee items.
+SELECT  TOP 3 
+  coffee_name,count(*) as orders
+  FROM dbo.Coffe_sales
+  group by coffee_name
+  order by orders desc;
+
+
+--? Time-Based Analysis
+
+--17.Total revenue by Time_of_Day.
+SELECT sum(money) as total_revenue,time_of_day
+FROM dbo.Coffe_sales
+group by time_of_day;
+
+
+--18.Average sales amount by hour_of_day.
+SELECT avg(money) as avg_sales,hour_of_day
+FROM dbo.Coffe_sales
+group by hour_of_day
+order by hour_of_day asc;
+
+--19.Hour with the highest total revenue.
+SELECT TOP 1 max(money) as highest_revenue,hour_of_day
+FROM dbo.Coffe_sales
+group by hour_of_day;
+
+--20.Number of orders per hour.
+SELECT hour_of_day,COUNT(*) AS orders
+FROM dbo.Coffe_sales
+group by hour_of_day
+order by orders desc;
+
+--?? Day & Month Analysis
+
+--21.Total sales by weekday.
+SELECT Weekday,count(*) as total_sales
+FROM dbo.Coffe_sales
+group by weekday;
+
+-- 22. Revenue by weekday
+SELECT Weekday, SUM(money) AS revenue
+FROM  dbo.Coffe_sales
+GROUP BY Weekday;
+
+--23.Which weekday has the highest revenue?
+SELECT top 1 max(money) as highest_revenue,weekday
+FROM dbo.Coffe_sales
+group by  weekday;
+
+--24.Total revenue by month.
+SELECT month_name as month ,sum(money)  as total_revenue
+FROM dbo.Coffe_sales
+group by month_name,monthsort
+order by monthsort;
+
+--25.Average transaction value per weekday.
+SELECT weekday, avg(money) as avg_transaction
+FROM dbo.Coffe_sales
+group by weekday;
+
+--26.Number of transactions per date.
+SELECT Date, COUNT(*) AS total_transactions 
+FROM dbo.Coffe_sales
+GROUP BY Date;
+
+--?? Payment & Customer Behavior Questions
+
+--27.Total revenue by payment type (cash_type).
+SELECT cash_type, sum(money) as total_revenue
+FROM dbo.Coffe_sales
+group by cash_type;
+
+--28.Count of transactions by payment method.
+SELECT cash_type , count(*) as transactions
+FROM dbo.Coffe_sales
+group by cash_type;
+
+--29.Average transaction value for card vs cash.
+SELECT cash_type, AVG(money) AS avg_value 
+FROM dbo.Coffe_sales
+GROUP BY cash_type;
+
+--30.Which payment type contributes more revenue?
+SELECT top 1 cash_type, SUM(money) AS revenue 
+FROM dbo.Coffe_sales
+GROUP BY cash_type
+ORDER BY revenue DESC;
+
+--31.Percentage of card payments vs cash payments.
+SELECT cash_type,
+ROUND(COUNT(*) * 100.0 / round(SUM(COUNT(*)) OVER (), 2),2) AS percentage 
+FROM dbo.Coffe_sales
+GROUP BY cash_type;
+
+--Advanced SQL Questions (WINDOW FUNCTIONS, SUBQUERIES)
+--Ranking & Comparison
+
+--32.Rank coffee types by total revenue.
+select coffee_name,sum(money) as total_revenue,
+rank() over (order by sum(money)desc) as rank
+from dbo.Coffe_sales
+group by coffee_name;
+
+--33.Rank weekdays based on total sales.
+SELECT weekday,sum(money) as total_sales,
+rank() over (order by sum(money) desc) as rank
+from dbo.Coffe_sales
+group by weekday;
+
+--34.Find the top-selling coffee for each weekday.
+select*
+from
+(select weekday,coffee_name,COUNT(*) AS orders,
+  RANK() OVER (PARTITION BY Weekday ORDER BY COUNT(*) DESC) rnk
+  FROM dbo.Coffe_sales
+  GROUP BY Weekday, coffee_name
+) t
+WHERE rnk = 1;
+
+--35.Show cumulative revenue ordered by date.
+SELECT Date,
+SUM(money) AS daily_revenue,
+SUM(SUM(money)) OVER (ORDER BY Date) AS cumulative_revenue
+FROM dbo.Coffe_sales
+GROUP BY Date;
+
+--36.Identify peak sales hour for each day.
+SELECT *
+FROM (
+  SELECT Date, hour_of_day,
+  SUM(money) AS revenue,
+  RANK() OVER (PARTITION BY Date ORDER BY SUM(money) DESC) rnk
+  FROM dbo.Coffe_sales
+  GROUP BY Date, hour_of_day
+) t
+WHERE rnk = 1;
+
+
+--Business Insights
+
+--37.Find days where revenue was above the monthly average.
+select Date, SUM(money) AS revenue
+FROM dbo.Coffe_sales
+GROUP BY Date
+HAVING SUM(money) >
+       (SELECT AVG(money) FROM dbo.Coffe_sales);
+
+--38.Compare morning vs evening revenue using CASE.
+WITH sales_session AS (
+    SELECT
+        CASE
+            WHEN Time_of_Day IN ('Morning','Afternoon') THEN 'Day'
+            ELSE 'Evening'
+        END AS session,
+        money
+    FROM dbo.Coffe_sales
+)
+SELECT
+    session,
+    SUM(money) AS revenue
+FROM sales_session
+GROUP BY session;
+
+
+--39.Find coffees that perform better in the Afternoon than Morning.
+SELECT coffee_name
+FROM dbo.Coffe_sales
+GROUP BY coffee_name
+HAVING
+    SUM(CASE WHEN Time_of_Day = 'Afternoon' THEN money ELSE 0 END)
+  > SUM(CASE WHEN Time_of_Day = 'Morning' THEN money ELSE 0 END);
+
+
+--40.Identify low-performing hours (below average revenue).
+WITH hourly_revenue AS (
+    SELECT
+        hour_of_day,
+        SUM(money) AS revenue
+    FROM dbo.Coffe_sales
+    GROUP BY hour_of_day
+)
+SELECT
+    hour_of_day,
+    revenue
+FROM hourly_revenue
+WHERE revenue <
+      (SELECT AVG(revenue) FROM hourly_revenue);
+
+--41.Detect revenue trends month-over-month.
+SELECT Month_name,
+SUM(money) AS revenue,
+SUM(money) - LAG(SUM(money)) OVER (ORDER BY Monthsort) AS mom_change
+FROM dbo.Coffe_sales
+GROUP BY Month_name, Monthsort;
+
+
+--Date & Time SQL Questions
+
+--42.Extract day, month, year from Date column.
+select day(date) as day,month(date) as month,
+year(date) as year
+from dbo.Coffe_sales
+
+--43.Count sales per day.
+select date,count(*)
+from dbo.Coffe_Sales 
+group by date;
+
+--44.Find busiest date.
+select date,count(*) as orders
+from dbo.Coffe_Sales 
+group by date
+order by orders desc;
+
+--45.Calculate average daily revenue.
+select avg(daily_rev) as daily_revenue
+from(
+  select Date, SUM(money) AS daily_rev
+  FROM dbo.Coffe_sales
+  GROUP BY Date
+) t;
+
+--46.Show first and last transaction date.
+SELECT MIN(Date) AS first_date, MAX(Date) AS last_date
+FROM dbo.Coffe_sales;
+
+--?? CASE WHEN & Conditional Logic
+
+--47.Categorize sales as High, Medium, Low based on amount.
+SELECT *,
+CASE
+    WHEN money >= (SELECT AVG(money) FROM dbo.Coffe_sales) THEN 'High'
+    WHEN money >= (SELECT AVG(money) * 0.85 FROM dbo.Coffe_sales) THEN 'Medium'
+    ELSE 'Low'
+END AS sale_category
+FROM dbo.Coffe_sales;
+
+
+--48.Label transactions as Peak Hour or Off Hour.
+SELECT *,
+CASE
+ WHEN hour_of_day BETWEEN 8 AND 11 THEN 'Peak'
+ ELSE 'Off'
+END AS hour_type
+FROM dbo.Coffe_sales;
+
+--49.Flag premium coffees (price > avg price).
+SELECT coffee_name
+FROM dbo.Coffe_sales
+GROUP BY coffee_name
+HAVING AVG(money) >
+       (SELECT AVG(money) FROM dbo.Coffe_sales);
+
+--50.Create a weekend vs weekday sales comparison.
+SELECT
+CASE
+    WHEN DATENAME(WEEKDAY, [Date]) IN ('Saturday','Sunday') THEN 'Weekend'
+    ELSE 'Weekday'
+END AS day_type,
+SUM(money) AS revenue
+FROM dbo.Coffe_sales
+GROUP BY
+CASE
+    WHEN DATENAME(WEEKDAY, [Date]) IN ('Saturday','Sunday') THEN 'Weekend'
+    ELSE 'Weekday'
+END;
+
+--51.Identify repeat coffee orders during the same hour.
+SELECT Date, hour_of_day, coffee_name, COUNT(*) AS repeats
+FROM dbo.Coffe_sales
+GROUP BY Date, hour_of_day, coffee_name
+HAVING COUNT(*) > 1;
+
+--Scenario-Based Questions
+
+--52.If you had to remove low-performing coffees, which would you remove?
+SELECT coffee_name, SUM(money) AS revenue
+FROM dbo.Coffe_sales
+GROUP BY coffee_name
+ORDER BY revenue;
+
+--53.Which coffee should be promoted in the Evening?
+SELECT TOP 1
+    coffee_name,
+    SUM(money) AS revenue
+FROM dbo.Coffe_sales
+WHERE hour_of_day >= 17
+GROUP BY coffee_name
+ORDER BY revenue DESC;
+
+--54.What time slot generates the most revenue per transaction?
+SELECT TOP 1
+    hour_of_day,
+    AVG(money) AS avg_revenue_per_transaction
+FROM dbo.Coffe_sales
+GROUP BY hour_of_day
+ORDER BY avg_revenue_per_transaction DESC;
+
+--55.Which weekday should discounts be avoided?
+select top 1 Weekday, AVG(money) AS avg_price
+FROM dbo.Coffe_sales
+GROUP BY Weekday
+ORDER BY avg_price DESC;
+
+
+--56.If staffing is limited, which hours need more staff?
+
+SELECT hour_of_day, COUNT(*) AS orders
+FROM dbo.Coffe_sales
+GROUP BY hour_of_day
+ORDER BY orders DESC;
